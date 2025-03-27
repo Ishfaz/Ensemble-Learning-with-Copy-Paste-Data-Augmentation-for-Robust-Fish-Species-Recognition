@@ -1,0 +1,103 @@
+from ultralytics import RTDETR
+import albumentations as A
+from ultralytics.utils import LOGGER, colorstr
+import torch
+import numpy as np
+import os
+
+def setup_augmentations(p=1.0):
+    """Setup custom augmentation pipeline"""
+    prefix = colorstr("Custom albumentations: ")
+    try:
+        T = [
+            A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.5),
+            A.CLAHE(clip_limit=4.0, tile_grid_size=(8, 8), p=0.3),
+            A.MotionBlur(blur_limit=7, p=0.2),
+            A.GaussianBlur(blur_limit=(3, 5), p=0.3),
+            A.HueSaturationValue(hue_shift_limit=5, sat_shift_limit=20, val_shift_limit=15, p=0.3),
+            A.RGBShift(r_shift_limit=10, g_shift_limit=10, b_shift_limit=20, p=0.3),
+            A.GaussNoise(var_limit=(10, 50), p=0.2),
+            A.RandomGamma(gamma_limit=(70,130), p=0.3),
+            A.RandomBrightnessContrast(p=0.5),
+            A.RandomSizedBBoxSafeCrop(height=640, width=640, erosion_rate=0.2, p=0.3),
+            A.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3, p=0.3)
+        ]
+        LOGGER.info(f"{prefix}" + ", ".join(f"{x.__class__.__name__}(p={x.p})" for x in T))
+        return A.Compose(T, bbox_params=A.BboxParams(format='yolo', label_fields=['class_labels']))
+    except Exception as e:
+        LOGGER.warning(f"{prefix}Error: {e}")
+        return None
+
+def on_train_start(trainer):
+    """Initialize augmentations at start of training"""
+    trainer.transform = setup_augmentations()
+    LOGGER.info("Custom augmentations initialized")
+
+def on_train_batch_start(trainer):
+    """Apply augmentations to training batch"""
+    if not hasattr(trainer, 'transform'):
+        return
+        
+    try:
+        # Access batch through train_loader iterator
+        for batch in trainer.train_loader:
+            if isinstance(batch, (tuple, list)) and len(batch) >= 2:
+                images, targets = batch[0], batch[1]
+                
+                # Apply transformations
+                for idx in range(len(images)):
+                    try:
+                        img = images[idx].permute(1, 2, 0).cpu().numpy()
+                        boxes = targets[targets[:, 0] == idx][:, 1:].cpu().numpy()
+                        
+                        if len(boxes) > 0:
+                            transformed = trainer.transform(
+                                image=img,
+                                bboxes=boxes,
+                                class_labels=['0'] * len(boxes)
+                            )
+                            
+                            images[idx] = torch.from_numpy(
+                                transformed['image']
+                            ).permute(2, 0, 1).to(images.device)
+                            
+                            if transformed['bboxes']:
+                                targets[targets[:, 0] == idx][:, 1:] = torch.from_numpy(
+                                    np.array(transformed['bboxes'])
+                                ).to(targets.device)
+                                
+                    except Exception as e:
+                        continue
+                        
+                # Yield modified batch back to training process
+                yield (images, targets) + batch[2:]
+                
+    except Exception as e:
+        LOGGER.warning(f"Batch augmentation error: {e}")
+        yield batch
+save_dir = "/cluster/home/ishfaqab/Saithes_prepared/results/RT-DETR_2_filtered_data"
+os.makedirs(save_dir, exist_ok=True)
+
+# Initialize RT-DETR with explicit parameters
+model = RTDETR('rtdetr-l.pt')      # Set number of classes to 1
+model.add_callback("on_train_start", on_train_start)
+model.add_callback("on_train_batch_start", on_train_batch_start)
+model.info()
+
+results = model.train(
+    project=save_dir,
+    name="run1",
+    data="/cluster/home/ishfaqab/Saithes_prepared/dataIfiltered/data.yaml",
+    epochs=350,
+    imgsz=640,
+    batch=32,
+    dropout=0.2,
+    augment=True,
+    exist_ok=True,
+    lr0=0.00005,
+    lrf=0.005,
+    momentum=0.937,
+    weight_decay=0.0005
+)
+
+print(f"\nResults are saved in: {os.path.join(save_dir, 'run1')}")
