@@ -166,9 +166,9 @@ if __name__ == "__main__":
     parser.add_argument("--model_path", type=str, default="yolov8m.pt", help="Pretrained Model")
     parser.add_argument("--save_dir", type=str, default="swa_checkpoints", help="Directory to save checkpoints")
     parser.add_argument("--epochs", type=int, default=300, help="Number of training epochs")
-    parser.add_argument("--base_epoch", type=int, default=258, help="Base epoch for SWA")
-    parser.add_argument("--batch_size", type=int, default=8, help="Batch size for training")
-    parser.add_argument("--image_size", type=int, default=416, help="Image size for training")
+    parser.add_argument("--base_epoch", type=int, default=260, help="Base epoch for SWA")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training")
+    parser.add_argument("--image_size", type=int, default=640, help="Image size for training")
     parser.add_argument("--base_lr", type=float, default=0.0001, help="low learning rate for FGE")
     parser.add_argument("--max_lr", type=float, default=0.01, help="high learning rate for FGE")
 
