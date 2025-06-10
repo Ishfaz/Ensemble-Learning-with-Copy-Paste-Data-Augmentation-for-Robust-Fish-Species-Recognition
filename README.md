@@ -75,7 +75,7 @@ If you want to test the model using the FGE method and SWA, you can use the foll
 ##Tracking and Counting with the Ensemble Model
 
 ## To perform object tracking and counting using an ensemble model, update paths in Ensemble_track.py
-* `--MODEL_DIR`  := '/path/to/ensemble/model/checkpoints'
-* `--INPUT_VIDEO_PATH` ' := '/path/to/input/video.mov'
-* `--OUTPUT_DIR` ': = '/path/to/output/results'
+* `--MODEL_DIR`:= '/path/to/ensemble/model/checkpoints'
+* `--INPUT_VIDEO_PATH`:= '/path/to/input/video.mov'
+* `--OUTPUT_DIR`: = '/path/to/output/results'
 
