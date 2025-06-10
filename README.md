@@ -26,7 +26,7 @@ To train the model on your custom dataset, prepare the dataset that is suiitable
 
 Once you prepare the dataset for training, you can train the YOLO model using various ensembling methods. 
 
-## Combined Ensemble (FGE + SWA)
+## Ensemble FGE and SWA
 For the combined ensemble, you can use the following command to train the model. Run this command from the home directory of the project:
 
 ```bash
